@@ -2,8 +2,10 @@ var request = require('request');
 var cheerio = require('cheerio');
 var datetime = require('node-datetime');
 var timeoutInMilliseconds = 10*1000
-var async = require('async');
-
+var Sequence = exports.Sequence || require('sequence').Sequence
+    , sequence = Sequence.create()
+    , err
+    ;
 var urlStats = 'http://www.soccerstats.com/latest.asp?league=brazil';
 var opts = {
   url: urlStats,
@@ -12,15 +14,22 @@ var opts = {
 
 var validIds = [];
 
+sequence
+	.then(function(next){
+		request(opts, function(err, res, body){
+			var $ = cheerio.load(body);
+			for (var i = 0; i < 300; i++) {
+				if($('#StatsBarContainer' + i)[0] === undefined){continue;}
+				validIds.push(i);
+			}
+		console.log(validIds);
+		next(err, validIds)
+		});		
+	})
+	.then(function(next, err, ids,b){
+		console.log(ids);
+	});
 
-request(opts, function(err, res, body){
-	var $ = cheerio.load(body);
-	for (var i = 0; i < 300; i++) {
-		if($('#StatsBarContainer' + i)[0] === undefined){continue;}
-		validIds.push(i);
-	}
-console.log(validIds);
-});
 
 
 
