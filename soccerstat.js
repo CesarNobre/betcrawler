@@ -11,51 +11,35 @@ var opts = {
   url: urlStats,
   timeout: timeoutInMilliseconds
 }
-
-var validIds = [];
+var soccerStatsBaseUrl = 'http://www.soccerstats.com/';
+var validLinks = [];
 
 sequence
 	.then(function(next){
 		request(opts, function(err, res, body){
 			var $ = cheerio.load(body);
 			for (var i = 0; i < 300; i++) {
-				if($('#StatsBarContainer' + i)[0] === undefined){continue;}
-				validIds.push(i);
+				var jogosDaRodada = $('#StatsBarContainer' + i + ' a')[0];
+				if(jogosDaRodada === undefined){continue;}
+				validLinks.push(jogosDaRodada.attribs.href);
 			}
-		console.log(validIds);
-		next(err, validIds)
+		next(err, validLinks);
 		});		
 	})
-	.then(function(next, err, ids,b){
-		console.log(ids);
+	.then(function(next, err, validLinks,b){
+		for (var i = 0; i < validLinks.length; i++) {
+			var options = {
+				url : soccerStatsBaseUrl + validLinks[i],
+				timeout:timeoutInMilliseconds
+			}
+			request(options, function(err, res, body){
+				var $ = cheerio.load(body);
+
+				var homeTeam = $('.six table tr td font b a');
+
+				console.log(homeTeam[0].children[0].data);
+			});
+		}
 	});
 
 
-
-
-
-function toTitleCase(str)
-{
-    return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();}).replace(/ +/g, "");
-}      
-
-
-function removerAcentos( newStringComAcento ) {
-  var string = newStringComAcento;
-	var mapaAcentosHex 	= {
-		a : /[\xE0-\xE6]/g,
-		e : /[\xE8-\xEB]/g,
-		i : /[\xEC-\xEF]/g,
-		o : /[\xF2-\xF6]/g,
-		u : /[\xF9-\xFC]/g,
-		c : /\xE7/g,
-		n : /\xF1/g
-	};
-
-	for ( var letra in mapaAcentosHex ) {
-		var expressaoRegular = mapaAcentosHex[letra];
-		string = string.replace( expressaoRegular, letra );
-	}
-
-	return string;
-}
