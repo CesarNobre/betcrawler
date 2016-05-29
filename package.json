@@ -12,6 +12,7 @@
     "node-datetime": "^1.0.0",
     "request": "^2.72.0",
     "simplecrawler": "^0.7.0",
+    "then-request": "^2.2.0",
     "webpage": "^0.3.0"
   },
   "scripts": {
