@@ -4,11 +4,13 @@
   "description": "",
   "main": "page.js",
   "dependencies": {
+    "mongoose": "^4.4.19",
     "webpage": "^0.3.0"
   },
   "devDependencies": {
     "cheerio": "^0.20.0",
     "crawler": "^0.4.3",
+    "mongoose": "^4.4.19",
     "node-datetime": "^1.0.0",
     "request": "^2.72.0",
     "sequence": "^3.0.0",

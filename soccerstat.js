@@ -1,6 +1,7 @@
 var request = require('request');
 var cheerio = require('cheerio');
 var datetime = require('node-datetime');
+var Mongoose = require('mongoose');
 var timeoutInMilliseconds = 10*1000
 var Sequence = exports.Sequence || require('sequence').Sequence
     , sequence = Sequence.create()
@@ -41,5 +42,4 @@ sequence
 			});
 		}
 	});
-
 
