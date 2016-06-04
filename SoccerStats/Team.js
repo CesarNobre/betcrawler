@@ -20,6 +20,6 @@ class Team {
 	this.scoresAway = [];
 	this.halfTimeScoresAtHome = [];
 	this.halfTimeScoresAway = [];
-
+	this.goalMargin
 	// methods
 }
