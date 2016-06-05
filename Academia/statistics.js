@@ -19,6 +19,8 @@ var opts = {
 }
 var eachRoundGameLink = [];
 
+
+console.log(PrevisaoJogo.module.PrevisaoJogo);
 sequence
 	.then(function(next){
 		request(opts, function(err, res, body){
@@ -36,7 +38,7 @@ sequence
 		}
 		request(options, function(err, res, body){
 			var $ = cheerio.load(body);
-			var previsaoJogo = new PrevisaoJogo.module.PrevisaoJogo();
+			var previsaoJogo = {};
 			var elementoNomeTimeFora = $('.stats-subtitle')[1];
 			var elementoAnoRodada = $('.gamehead a')[1];
 			var elementoRodada = $('.gamehead a')[2];
