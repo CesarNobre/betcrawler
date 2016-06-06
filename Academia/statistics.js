@@ -6,6 +6,8 @@ var request = require('request');
 var cheerio = require('cheerio');
 var PrevisaoJogo = require('./PrevisaoJogo');
 var find = require('cheerio-eq');
+var async = require('async');
+
 var regexOnlyNumbers = /[^0-9\.]/g;
 var timeoutInMilliseconds = 10*1000
 var Sequence = exports.Sequence || require('sequence').Sequence
@@ -19,8 +21,16 @@ var opts = {
 }
 var eachRoundGameLink = [];
 
+db.on('error', console.error);
+db.once('open', function() {
+  console.log('Conectado ao MongoDB.')
+  // Vamos adicionar nossos Esquemas, Modelos e consultas aqui
+});
 
-console.log(PrevisaoJogo.module.PrevisaoJogo);
+var previsaoJogoSchema = new Mongoose.Schema(PrevisaoJogo.module.PrevisaoJogo);
+var previsaoModel = Mongoose.model('previsaoModel', previsaoJogoSchema);
+var previsaoJogo = new previsaoModel();
+
 sequence
 	.then(function(next){
 		request(opts, function(err, res, body){
@@ -32,13 +42,13 @@ sequence
 		});		
 	})
 	.then(function(next, err, eachRoundGameLink){
-		var options = {
-			url: eachRoundGameLink[0],
-			timeout: timeoutInMilliseconds
-		}
-		request(options, function(err, res, body){
-			var $ = cheerio.load(body);
-			var previsaoJogo = {};
+		
+		var q = async.queue(function (task, done) {
+		    request(task.url, function(err, res, body) {
+		        if (err) return done(err);
+		        if (res.statusCode != 200) return done(res.statusCode);
+
+        	var $ = cheerio.load(body);
 			var elementoNomeTimeFora = $('.stats-subtitle')[1];
 			var elementoAnoRodada = $('.gamehead a')[1];
 			var elementoRodada = $('.gamehead a')[2];
@@ -222,6 +232,11 @@ sequence
 				indexPropriedade++;
 			});
 
+			previsaoJogo.CasaVitoriasNoUltimosDezJogos = 0;
+			previsaoJogo.CasaEmpatesNoUltimosDezJogos = 0;
+			previsaoJogo.CasaDerrotasNoUltimosDezJogos = 0;
+
+
 			$(elementoUltimosJogosCasa).each(function(index){
 				if(index >= 10) return false;
 
@@ -244,9 +259,12 @@ sequence
 
 			});
 
+			previsaoJogo.ForaVitoriasNoUltimosDezJogos = 0;
+			previsaoJogo.ForaEmpatesNoUltimosDezJogos = 0;
+			previsaoJogo.ForaDerrotasNoUltimosDezJogos = 0;
+			
 			$(elementoUltimosJogosFora).each(function(index){
 				if(index >= 10) return false;
-
 				var resultadoJogo = $(this).children('td')[3];
 
 				if($(resultadoJogo).hasClass('stat-win')){
@@ -266,6 +284,23 @@ sequence
 
 			});
 
-			console.log(previsaoJogo);
-		});
+			console.log(previsaoJogo.ForaVitoriasNoUltimosDezJogos);
+
+			//console.log(previsaoJogo);
+
+			previsaoJogo.save(function (err, fluffy) {
+			  if (err) return console.error(err);
+
+			  console.log('salvo com sucesso! ' + previsaoJogo.NomeTimeCasa);
+			});
+		        done();
+		    });
+		}, 5);
+		
+		for (var i = 0; i < eachRoundGameLink.length; i++) {
+			q.push({ url: eachRoundGameLink[i] });
+		}
+		
+
+
 	});
