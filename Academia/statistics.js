@@ -5,6 +5,8 @@ var db = Mongoose.connection;
 var request = require('request');
 var cheerio = require('cheerio');
 var PrevisaoJogo = require('./PrevisaoJogo');
+var Propriedades = require('./propriedades');
+
 var find = require('cheerio-eq');
 var async = require('async');
 
@@ -14,293 +16,233 @@ var Sequence = exports.Sequence || require('sequence').Sequence
     , sequence = Sequence.create()
     , err
     ;
-var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/brasil-stats/26/11185/30889/0/6';
-var opts = {
-  url: firstRoundLink,
-  timeout: timeoutInMilliseconds
-}
-var eachRoundGameLink = [];
+
 
 db.on('error', console.error);
 db.once('open', function() {
   console.log('Conectado ao MongoDB.')
-  // Vamos adicionar nossos Esquemas, Modelos e consultas aqui
 });
 
 var previsaoJogoSchema = new Mongoose.Schema(PrevisaoJogo.module.PrevisaoJogo);
 var previsaoModel = Mongoose.model('previsaoModel', previsaoJogoSchema);
-var previsaoJogo = new previsaoModel();
+var self = this;
 
-sequence
-	.then(function(next){
-		request(opts, function(err, res, body){
-			var $ = cheerio.load(body);
-			$('.darker a').each(function() {
-				eachRoundGameLink.push($(this).attr('href'));
-			});
-		next(err, eachRoundGameLink);
-		});		
-	})
-	.then(function(next, err, eachRoundGameLink){
-		
-		var q = async.queue(function (task, done) {
-		    request(task.url, function(err, res, body) {
-		        if (err) return done(err);
-		        if (res.statusCode != 200) return done(res.statusCode);
+self.elementosParaSalvar = [];
+var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1';
+self.opts = {
+  url: firstRoundLink,
+  timeout: timeoutInMilliseconds
+}
 
-        	var $ = cheerio.load(body);
-			var elementoNomeTimeFora = $('.stats-subtitle')[1];
-			var elementoAnoRodada = $('.gamehead a')[1];
-			var elementoRodada = $('.gamehead a')[2];
-			var elementoCampeonato = $('.gamehead a')[0];
-			var elementoCasaTop5Total = $('.competition-half-padding tbody tr[style*="background-color: #4682B4"] td')[0];
-			var elementoCasaTop5Casa = $('.competition-half-padding tbody tr[style*="background-color: #4682B4"] td')[8];
-			var elementoCasaTop5Fora = $('.competition-half-padding tbody tr[style*="background-color: #CDDFF0"] td')[0];
-			var elementoForaTop5Total = $('.competition-half-padding tbody tr[style*="background-color: #FFA500"] td')[0];
-			var elementoForaTop5Fora = $('.competition-half-padding tbody tr[style*="background-color: #FFA500"] td')[8];
-			var elementoForaTop5Casa = $('.competition-half-padding tbody tr[style*="background-color: #FFE0A6"] td')[0];
-			var elementoTabelaPercursoEGols = $('.stat-seqs tbody tr td');
-			var elementoGolSofridosPorPeriodo = $('.stat-goals tbody tr td:nth-child(2)');
-			var elementoGolMarcadoPorPeriodo = $('.stats-wd-goalstime3');
-			var elementoUltimosJogosCasa = find($,'.stat-last10 tbody:eq(0) tr');
-			var elementoUltimosJogosFora = find($,'.stat-last10 tbody:eq(1) tr');
+function StartCrawler(){
+	console.log('ENTROU NO START CRAWLER');
+var eachRoundGameLink = [];
+	sequence = Sequence.create();
+	sequence
+		.then(function(next){
+			console.log('ENTROU NO THEN');
+			request(self.opts, function(err, res, body){
+				if(err){throw err;}
+				var $ = cheerio.load(body);
+				$('.darker a').each(function() {
+					eachRoundGameLink.push($(this).attr('href'));
+				});
+			next(err, eachRoundGameLink);
+			});		
+		})
+		.then(function(next, err, eachRoundGameLink){
+			var page = 0;
+			console.log(eachRoundGameLink.length);
+			async.whilst(
+				function(){
+					return page < eachRoundGameLink.length;
+				},
 
-			previsaoJogo.NomeTimeCasa = $('.stats-subtitle').first().text();
-			previsaoJogo.NomeTimeFora = $(elementoNomeTimeFora).text();
-			previsaoJogo.Resultado = $('.f-score').text().trim();
-			previsaoJogo.Ano = $(elementoAnoRodada).text().trim();
-			previsaoJogo.Rodada = $(elementoRodada).text().trim().replace(regexOnlyNumbers,'');
-			previsaoJogo.Campeonato = $(elementoCampeonato).text().trim();
-			previsaoJogo.CasaTop5Total = parseInt($(elementoCasaTop5Total).text().trim()) <= 5;
-			previsaoJogo.CasaTop5Casa = parseInt($(elementoCasaTop5Casa).text().trim()) <= 5;
-			previsaoJogo.CasaTop5Fora = parseInt($(elementoCasaTop5Fora).text().trim()) <= 5;
-			previsaoJogo.ForaTop5Total = parseInt($(elementoForaTop5Total).text().trim()) <= 5;
-			previsaoJogo.ForaTop5Fora = parseInt($(elementoForaTop5Fora).text().trim()) <= 5;
-			previsaoJogo.ForaTop5Casa = parseInt($(elementoForaTop5Casa).text().trim()) <= 5;
+				function (nextAsync, teste) {
+				    request(eachRoundGameLink[page], function(err, res, body) {
+					    if (err) {return console.log(err); return false}
+					    if (res.statusCode != 200) {return console.log(res.statusCode); return false}
 
-			var propriedades =
-			[
-				'CasaSequenciaVitoriasCasa',
-				'CasaSequenciaVitoriasFora',
-				'CasaSequenciaVitoriasGlobal',
-				'CasaSequenciaEmpatesCasa',
-				'CasaSequenciaEmpatesFora',
-				'CasaSequenciaEmpatesGlobal',
-				'CasaSequenciaDerrotasCasa',
-				'CasaSequenciaDerrotasFora',
-				'CasaSequenciaDerrotasGlobal',
-				'CasaJogosSemGanharCasa',
-				'CasaJogosSemGanharFora',
-				'CasaJogosSemGanharGlobal',
-				'CasaJogosSemEmpatarCasa',
-				'CasaJogosSemEmpatarFora',
-				'CasaJogosSemEmpatarGlobal',
-				'CasaJogosSemPerderCasa',
-				'CasaJogosSemPerderFora',
-				'CasaJogosSemPerderGlobal',
-				'ForaSequenciaVitoriasCasa',
-				'ForaSequenciaVitoriasFora',
-				'ForaSequenciaVitoriasGlobal',
-				'ForaSequenciaEmpatesCasa',
-				'ForaSequenciaEmpatesFora',
-				'ForaSequenciaEmpatesGlobal',
-				'ForaSequenciaDerrotasCasa',
-				'ForaSequenciaDerrotasFora',
-				'ForaSequenciaDerrotasGlobal',
-				'ForaJogosSemGanharCasa',
-				'ForaJogosSemGanharFora',
-				'ForaJogosSemGanharGlobal',
-				'ForaJogosSemEmpatarCasa',
-				'ForaJogosSemEmpatarFora',
-				'ForaJogosSemEmpatarGlobal',
-				'ForaJogosSemPerderCasa',
-				'ForaJogosSemPerderFora',
-				'ForaJogosSemPerderGlobal',
-				'CasaMediaGolsMarcadosPorJogoCasa',
-				'CasaMediaGolsMarcadosPorJogoFora',
-				'CasaMediaGolsMarcadosPorJogoGlobal',
-				'CasaMediaGolsSofridosPorJogoCasa',
-				'CasaMediaGolsSofridosPorJogoFora',
-				'CasaMediaGolsSofridosPorJogoGlobal',
-				'CasaMediaGolsMarcadosSofridosPorJogoCasa',
-				'CasaMediaGolsMarcadosSofridosPorJogoFora',
-				'CasaMediaGolsMarcadosSofridosPorJogoGlobal',
-				'CasaJogosSemSofrerGolsCasa',
-				'CasaJogosSemSofrerGolsFora',
-				'CasaJogosSemSofrerGolsGlobal',
-				'CasaJogosSemMarcarGolsCasa',
-				'CasaJogosSemMarcarGolsFora',
-				'CasaJogosSemMarcarGolsGlobal',
-				'CasaJogosMaisDoisMeioGolsCasa',
-				'CasaJogosMaisDoisMeioGolsFora',
-				'CasaJogosMaisDoisMeioGolsGlobal',
-				'CasaJogosMenosDoisMeioGolsCasa',
-				'CasaJogosMenosDoisMeioGolsFora',
-				'CasaJogosMenosDoisMeioGolsGlobal',
-				'CasaAbreMarcadorCasa',
-				'CasaAbreMarcadorGlobal',
-				'CasaEVencendoAoIntervaloCasa',
-				'CasaEVencendoAoIntervaloPorcentagem',
-				'CasaEVenceuAoFimCasa',
-				'CasaEVenceuAoFimPorcentagem',
-				
-				'ForaMediaGolsMarcadosPorJogoCasa',
-				'ForaMediaGolsMarcadosPorJogoFora',
-				'ForaMediaGolsMarcadosPorJogoGlobal',
-				'ForaMediaGolsSofridosPorJogoCasa',
-				'ForaMediaGolsSofridosPorJogoFora',
-				'ForaMediaGolsSofridosPorJogoGlobal',
-				'ForaMediaGolsMarcadosSofridosPorJogoCasa',
-				'ForaMediaGolsMarcadosSofridosPorJogoFora',
-				'ForaMediaGolsMarcadosSofridosPorJogoGlobal',
-				'ForaJogosSemSofrerGolsCasa',
-				'ForaJogosSemSofrerGolsFora',
-				'ForaJogosSemSofrerGolsGlobal',
-				'ForaJogosSemMarcarGolsCasa',
-				'ForaJogosSemMarcarGolsFora',
-				'ForaJogosSemMarcarGolsGlobal',
-				'ForaJogosMaisDoisMeioGolsCasa',
-				'ForaJogosMaisDoisMeioGolsFora',
-				'ForaJogosMaisDoisMeioGolsGlobal',
-				'ForaJogosMenosDoisMeioGolsCasa',
-				'ForaJogosMenosDoisMeioGolsFora',
-				'ForaJogosMenosDoisMeioGolsGlobal',
-				'ForaAbreMarcadorFora',
-				'ForaAbreMarcadorPorcentagem',
-				'ForaEVencendoAoIntervaloFora',
-				'ForaEVencendoAoIntervaloPorcentagem',
-				'ForaEVenceuAoFimFora',
-				'ForaEVenceuAoFimPorcentagem',
+						var previsaoJogo = new previsaoModel();
+			        	var $ = cheerio.load(body);
+						var elementoNomeTimeFora = $('.stats-subtitle')[1];
+						var elementoAnoRodada = $('.gamehead a')[1];
+						var elementoRodada = $('.gamehead a')[2];
+						var elementoCampeonato = $('.gamehead a')[0];
+						var elementoCasaTop5Total = $('.competition-half-padding tbody tr[style*="background-color: #4682B4"] td')[0];
+						var elementoCasaTop5Casa = $('.competition-half-padding tbody tr[style*="background-color: #4682B4"] td')[8];
+						var elementoCasaTop5Fora = $('.competition-half-padding tbody tr[style*="background-color: #CDDFF0"] td')[0];
+						var elementoForaTop5Total = $('.competition-half-padding tbody tr[style*="background-color: #FFA500"] td')[0];
+						var elementoForaTop5Fora = $('.competition-half-padding tbody tr[style*="background-color: #FFA500"] td')[8];
+						var elementoForaTop5Casa = $('.competition-half-padding tbody tr[style*="background-color: #FFE0A6"] td')[0];
+						var elementoTabelaPercursoEGols = $('.stat-seqs tbody tr td');
+						var elementoGolSofridosPorPeriodo = $('.stat-goals tbody tr td:nth-child(2)');
+						var elementoGolMarcadoPorPeriodo = $('.stats-wd-goalstime3');
+						var elementoUltimosJogosCasa = find($,'.stat-last10 tbody:eq(0) tr');
+						var elementoUltimosJogosFora = find($,'.stat-last10 tbody:eq(1) tr');
 
-			];
-			var indexPropriedade = 0;
-			var cabecalhosDoMandante = [85, 89, 93, 97, 101, 105, 109, 113, 116, 119];
-			var irParaProximoIndex = true;
-			$(elementoTabelaPercursoEGols).each(function(index,val){
-				if(index > 121) return false;
-				if((index <= 75 && index % 4 === 0) || index === 76 || index === 79 || index === 82) return irParaProximoIndex;
-				if(index >= 85 && (cabecalhosDoMandante.indexOf(index) > -1)) return irParaProximoIndex;
+						previsaoJogo.NomeTimeCasa = $('.stats-subtitle').first().text();
+						previsaoJogo.NomeTimeFora = $(elementoNomeTimeFora).text();
+						previsaoJogo.Resultado = $('.f-score').text().trim();
+						previsaoJogo.Ano = $(elementoAnoRodada).text().trim();
+						previsaoJogo.Rodada = $(elementoRodada).text().trim().replace(regexOnlyNumbers,'');
+						previsaoJogo.Campeonato = $(elementoCampeonato).text().trim();
+						previsaoJogo.CasaTop5Total = parseInt($(elementoCasaTop5Total).text().trim()) <= 5;
+						previsaoJogo.CasaTop5Casa = parseInt($(elementoCasaTop5Casa).text().trim()) <= 5;
+						previsaoJogo.CasaTop5Fora = parseInt($(elementoCasaTop5Fora).text().trim()) <= 5;
+						previsaoJogo.ForaTop5Total = parseInt($(elementoForaTop5Total).text().trim()) <= 5;
+						previsaoJogo.ForaTop5Fora = parseInt($(elementoForaTop5Fora).text().trim()) <= 5;
+						previsaoJogo.ForaTop5Casa = parseInt($(elementoForaTop5Casa).text().trim()) <= 5;
 
-				previsaoJogo[propriedades[indexPropriedade]] = $(this).text().trim() === '-' ? 0 : $(this).text().trim();
-				indexPropriedade++;
-			});
+						var propriedades = Propriedades.module.Propriedades;
+
+						var indexPropriedade = 0;
+						var cabecalhosDoMandante = [85, 89, 93, 97, 101, 105, 109, 113, 116, 119];
+						var irParaProximoIndex = true;
+						$(elementoTabelaPercursoEGols).each(function(index,val){
+							if(index > 121) return false;
+							if((index <= 75 && index % 4 === 0) || index === 76 || index === 79 || index === 82) return irParaProximoIndex;
+							if(index >= 85 && (cabecalhosDoMandante.indexOf(index) > -1)) return irParaProximoIndex;
+
+							previsaoJogo[propriedades[indexPropriedade]] = $(this).text().trim() === '-' ? 0 : $(this).text().trim();
+							indexPropriedade++;
+						});
 
 
-			var propriedadesGolsSofridosPorPeriodo = [
-				'CasaGolsSofridosZeroQuinze',
-				'CasaGolsSofridosDezeseisTrinta',
-				'CasaGolsSofridosTrintaUmQuarentaCinco',
-				'CasaGolsSofridosQuarentaSeisSessenta',
-				'CasaGolsSofridosSessentaUmSetentaCinco',
-				'CasaGolsSofridosSetentaSeisNoventa',
-				'ForaGolsSofridosZeroQuinze',
-				'ForaGolsSofridosDezeseisTrinta',
-				'ForaGolsSofridosTrintaUmQuarentaCinco',
-				'ForaGolsSofridosQuarentaSeisSessenta',
-				'ForaGolsSofridosSessentaUmSetentaCinco',
-				'ForaGolsSofridosSetentaSeisNoventa'
-			];
+						var propriedadesGolsSofridosPorPeriodo = Propriedades.module.PropriedadesGolsSofridosPorPeriodo;
+						
+						indexPropriedade = 0;
+
+						$(elementoGolSofridosPorPeriodo).each(function(index){
+							if(index % 2 === 0)return irParaProximoIndex;
+
+							previsaoJogo[propriedadesGolsSofridosPorPeriodo[indexPropriedade]] = $(this).text().trim();
+							indexPropriedade++;
+						});
+
+						var propriedadesGolsMarcadosPorPeriodo = Propriedades.module.PropriedadesGolsMarcadosPorPeriodo;
+
+						indexPropriedade = 0;
+
+						$(elementoGolMarcadoPorPeriodo).each(function(index){
+							previsaoJogo[propriedadesGolsMarcadosPorPeriodo[indexPropriedade]] = $(this).text().trim();
+							indexPropriedade++;
+						});
+
+						previsaoJogo.CasaVitoriasNoUltimosDezJogos = 0;
+						previsaoJogo.CasaEmpatesNoUltimosDezJogos = 0;
+						previsaoJogo.CasaDerrotasNoUltimosDezJogos = 0;
+
+
+						$(elementoUltimosJogosCasa).each(function(index){
+							if(index >= 10) return false;
+
+							var resultadoJogo = $(this).children('td')[3];
+
+							if($(resultadoJogo).hasClass('stat-win')){
+								++previsaoJogo.CasaVitoriasNoUltimosDezJogos;
+								return true;
+							}
+
+							if($(resultadoJogo).hasClass('stat-draw')){
+								++previsaoJogo.CasaEmpatesNoUltimosDezJogos;
+								return true;
+							}
+							
+							if($(resultadoJogo).hasClass('stat-lose')){
+								++previsaoJogo.CasaDerrotasNoUltimosDezJogos;
+								return true;
+							}
+
+						});
+
+						previsaoJogo.ForaVitoriasNoUltimosDezJogos = 0;
+						previsaoJogo.ForaEmpatesNoUltimosDezJogos = 0;
+						previsaoJogo.ForaDerrotasNoUltimosDezJogos = 0;
+						
+						$(elementoUltimosJogosFora).each(function(index){
+							if(index >= 10) return false;
+							var resultadoJogo = $(this).children('td')[3];
+
+							if($(resultadoJogo).hasClass('stat-win')){
+								++previsaoJogo.ForaVitoriasNoUltimosDezJogos;
+								return true;
+							}
+
+							if($(resultadoJogo).hasClass('stat-lose')){
+								++previsaoJogo.ForaDerrotasNoUltimosDezJogos;
+								return true;
+							}
+							
+							if($(resultadoJogo).hasClass('stat-draw')){
+								++previsaoJogo.ForaEmpatesNoUltimosDezJogos;
+								return true;
+							}
+
+						});
+
+			    		page++;
+		    			self.elementosParaSalvar.push(previsaoJogo);
+
+						if(page >= eachRoundGameLink.length){
+							console.log('entrou no PROXIMO!!')
+							next(err, self.elementosParaSalvar);
+							return false;
+						}
+
+						nextAsync(err, self.elementosParaSalvar);
+					});//request
+				}, 
+			5);
+		})
+		.then(function(next, err, jogos){
+			if(jogos.length == 0 ){console.log('deu ruim'); return;}
+			console.log('valor de jogos: ' + jogos);
+
+			var total = jogos.length
+			  , result = []
+			;
+
+			function saveAll(){
+			  var doc = jogos.pop();
+			  for (var i = 0; i < jogos.length; i++) {
+			  	//console.log(jogos[i].NomeTimeCasa);
+			  }
+			  //console.log(doc.NomeTimeCasa);
+			  //console.log('entrou no saveall');
+			  doc.save(function(err, saved){
+			    if (err) 
+			    {console.log('deu ruim no save!');throw err;}//handle error
+
+			    result.push(saved[0]);
+			    if (--total) saveAll();
+			    else {
+			    	console.log(result + "SALVO COM SUCESSO!");
+			    	next();
+			    }
+			  })
+			}
+
+			saveAll();
+		})
+		.then(function(next, err){
+			console.log('entrou');
+			var currentRoundUrl = self.opts.url;
+			var splittedUrl = currentRoundUrl.split('/');
+			var lastItem = splittedUrl[splittedUrl.length - 1];
+
+			if(lastItem >= 38)
+			{console.log('PRONTO FILHÃO!'); return false;}
+
+			splittedUrl[splittedUrl.length - 1] =  parseInt(lastItem) + 1;
 			
-			indexPropriedade = 0;
+			self.opts.url = splittedUrl.join('/');
 
-			$(elementoGolSofridosPorPeriodo).each(function(index){
-				if(index % 2 === 0)return irParaProximoIndex;
-
-				previsaoJogo[propriedadesGolsSofridosPorPeriodo[indexPropriedade]] = $(this).text().trim();
-				indexPropriedade++;
-			});
-
-			var propriedadesGolsMarcadosPorPeriodo = [
-				'CasaGolsMarcadosZeroQuinze',
-				'CasaGolsMarcadosDezeseisTrinta',
-				'CasaGolsMarcadosTrintaUmQuarentaCinco',
-				'CasaGolsMarcadosQuarentaSeisSessenta',
-				'CasaGolsMarcadosSessentaUmSetentaCinco',
-				'CasaGolsMarcadosSetentaSeisNoventa',
-				'ForaGolsMarcadosZeroQuinze',
-				'ForaGolsMarcadosDezeseisTrinta',
-				'ForaGolsMarcadosTrintaUmQuarentaCinco',
-				'ForaGolsMarcadosQuarentaSeisSessenta',
-				'ForaGolsMarcadosSessentaUmSetentaCinco',
-				'ForaGolsMarcadosSetentaSeisNoventa'
-			];
-
-			indexPropriedade = 0;
-
-			$(elementoGolMarcadoPorPeriodo).each(function(index){
-				previsaoJogo[propriedadesGolsMarcadosPorPeriodo[indexPropriedade]] = $(this).text().trim();
-				indexPropriedade++;
-			});
-
-			previsaoJogo.CasaVitoriasNoUltimosDezJogos = 0;
-			previsaoJogo.CasaEmpatesNoUltimosDezJogos = 0;
-			previsaoJogo.CasaDerrotasNoUltimosDezJogos = 0;
+			console.log(self.opts.url);
 
 
-			$(elementoUltimosJogosCasa).each(function(index){
-				if(index >= 10) return false;
+			StartCrawler();
+		});
+}
 
-				var resultadoJogo = $(this).children('td')[3];
-
-				if($(resultadoJogo).hasClass('stat-win')){
-					++previsaoJogo.CasaVitoriasNoUltimosDezJogos;
-					return true;
-				}
-
-				if($(resultadoJogo).hasClass('stat-draw')){
-					++previsaoJogo.CasaEmpatesNoUltimosDezJogos;
-					return true;
-				}
-				
-				if($(resultadoJogo).hasClass('stat-lose')){
-					++previsaoJogo.CasaDerrotasNoUltimosDezJogos;
-					return true;
-				}
-
-			});
-
-			previsaoJogo.ForaVitoriasNoUltimosDezJogos = 0;
-			previsaoJogo.ForaEmpatesNoUltimosDezJogos = 0;
-			previsaoJogo.ForaDerrotasNoUltimosDezJogos = 0;
-			
-			$(elementoUltimosJogosFora).each(function(index){
-				if(index >= 10) return false;
-				var resultadoJogo = $(this).children('td')[3];
-
-				if($(resultadoJogo).hasClass('stat-win')){
-					++previsaoJogo.ForaVitoriasNoUltimosDezJogos;
-					return true;
-				}
-
-				if($(resultadoJogo).hasClass('stat-lose')){
-					++previsaoJogo.ForaDerrotasNoUltimosDezJogos;
-					return true;
-				}
-				
-				if($(resultadoJogo).hasClass('stat-draw')){
-					++previsaoJogo.ForaEmpatesNoUltimosDezJogos;
-					return true;
-				}
-
-			});
-
-			console.log(previsaoJogo.ForaVitoriasNoUltimosDezJogos);
-
-			//console.log(previsaoJogo);
-
-			previsaoJogo.save(function (err, fluffy) {
-			  if (err) return console.error(err);
-
-			  console.log('salvo com sucesso! ' + previsaoJogo.NomeTimeCasa);
-			});
-		        done();
-		    });
-		}, 5);
-		
-		for (var i = 0; i < eachRoundGameLink.length; i++) {
-			q.push({ url: eachRoundGameLink[i] });
-		}
-		
-
-
-	});
+StartCrawler();
