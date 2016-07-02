@@ -94,5 +94,7 @@ exports.module = {
 		ForaGolsMarcadosQuarentaSeisSessenta : String,
 		ForaGolsMarcadosSessentaUmSetentaCinco : String,
 		ForaGolsMarcadosSetentaSeisNoventa : String,
+
+		GoalsTime: []
 	}
 }

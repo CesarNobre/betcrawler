@@ -28,7 +28,7 @@ var previsaoModel = Mongoose.model('previsaoModel', previsaoJogoSchema);
 var self = this;
 
 self.elementosParaSalvar = [];
-var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1';
+var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1';
 self.opts = {
   url: firstRoundLink,
   timeout: timeoutInMilliseconds
@@ -43,7 +43,9 @@ var eachRoundGameLink = [];
 			console.log('ENTROU NO THEN');
 			request(self.opts, function(err, res, body){
 				if(err){throw err;}
+				
 				var $ = cheerio.load(body);
+
 				$('.darker a').each(function() {
 					eachRoundGameLink.push($(this).attr('href'));
 				});
