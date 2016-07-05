@@ -29,18 +29,30 @@ var self = this;
 
 self.elementosParaSalvar = [];
 
-var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1';
+self.links = 
+[
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/8491/21879/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/7281/18383/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1'
+];
+
 self.opts = {
-  url: firstRoundLink,
+  url: '',
   timeout: timeoutInMilliseconds
 }
-
 function StartCrawler(){
 	console.log('ENTROU NO START CRAWLER');
 var eachRoundGameLink = [];
 	sequence = Sequence.create();
 	sequence
 		.then(function(next){
+			if(self.links.length == 0){ return; }
+			if(self.opts.url == ''){
+				self.opts.url = self.links.pop();
+			}
+
 			request(self.opts, function(err, res, body){
 				if(err){throw err;}
 	        	var $ = cheerio.load(body);
@@ -138,16 +150,12 @@ var eachRoundGameLink = [];
 		.then(function(next, err, jogos){
 			if(jogos.length == 0 ){console.log('deu ruim'); return;}
 
-			console.log('valor de jogos: ' + jogos);
-			var jogo = jogos.pop();
-
-
 			var total = jogos.length
 			  , result = []
 			;
 
 			function saveAll(){
-			  var doc = jogos.pop();
+			  var jogo = jogos.pop();
 
 		      var query = {
 					NomeTimeCasa:jogo.NomeTimeCasa, 
@@ -158,7 +166,8 @@ var eachRoundGameLink = [];
 
 			   previsaoModel.findOne(query, function(err, doc){
 					doc.GoalsTime = jogo.goalsTime;
-					
+					doc.save();
+					console.log(doc.GoalsTime);
 					if (--total) saveAll();
 			    	else {
 			    		console.log(result + "SALVO COM SUCESSO!");
@@ -176,8 +185,11 @@ var eachRoundGameLink = [];
 			var splittedUrl = currentRoundUrl.split('/');
 			var lastItem = splittedUrl[splittedUrl.length - 1];
 
-			if(lastItem >= 38)
-			{console.log('PRONTO FILHÃO!'); return false;}
+			if(lastItem >= 38){
+				self.opts.url = '';
+				console.log('FIM DE UMA TEMPORADA!'); 
+				return StartCrawler();
+			}
 
 			splittedUrl[splittedUrl.length - 1] =  parseInt(lastItem) + 1;
 			
