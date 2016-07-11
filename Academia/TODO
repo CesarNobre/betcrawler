@@ -1,0 +1,4 @@
+TODO
+1) desconsiderar rodada <= 6
+2) desconsiderar golsTime <= 15 e primeiro goalsTime >= 30
+3) ultimos 6 jogos de cada time pelo menos 4 jogos com mais de 1.5 gols.

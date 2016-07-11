@@ -1,3 +1,4 @@
+require('linqjs');
 var Excel = require('exceljs');
 var workbook = new Excel.Workbook();
 var sheet = workbook.addWorksheet('My Sheet');
@@ -17,6 +18,15 @@ db.once('open', function() {
 
 var previsaoJogoSchema = new Mongoose.Schema(PrevisaoJogo.module.PrevisaoJogo);
 var previsaoModel = Mongoose.model('previsaoModel', previsaoJogoSchema);
+var jogosValidosParaAplicarMetodo = 0;
+var jogosMetodoDeuCerto = 0;
+var jogosMaiorQueOitoDeuCerto = 0;
+
+var jogosMaiorQueOitoDeuCertoAlemanha = 0;
+var jogosMaiorQueOitoDeuCertoEspanha = 0;
+var jogosMaiorQueOitoDeuCertoFranca = 0;
+var jogosMaiorQueOitoDeuCertoItalia = 0;
+var jogosMaiorQueOitoDeuCertoInglaterra = 0;
 
 sequence
 	.then(function(next){
@@ -26,6 +36,10 @@ sequence
 	})
 	.then(function(next, err, previsoes){
 		worksheet.columns = [
+			{ header: "GanhamosBufunfaBezos", key: "ganhamosBufunfaBezos", width: 25},
+			{ header: "GanhamosBufunfaMaiorQueOito", key: "ganhamosBufunfaMaiorQueOito", width: 25},
+			{ header: "OitoDeDozeOverUmMeio", key: "oitoDeDozeOverUmMeio", width: 25},
+			{ header: "QuatroDeSeisOverUmMeio", key: "quatroDeSeisOverUmMeio", width: 25},
 		    { header: "GoalsTime", key: "goalsTime", width: 25 },
 			{ header: "NomeTimeCasa", key: "nomeTimeCasa", width: 25 },
 			{ header: "NomeTimeFora", key: "nomeTimeFora", width: 25 },
@@ -121,8 +135,93 @@ sequence
 	})
 	.then(function(next, err, previsoes){
 		for (var i = 0; i < previsoes.length; i++) {
+			var jogoAtual = previsoes[i];
+
+			if(previsoes[i].Rodada <= 6){ continue;}
+			if(previsoes[i].GoalsTime.length > 0){
+				goalsOutRange = (previsoes[i].GoalsTime[0] <= 15 || previsoes[i].GoalsTime[0] >= 30)
+				
+				if(previsoes[i].GoalsTime[0] <= 15){
+					continue;
+				}
+
+			}
+			jogosValidosParaAplicarMetodo = jogosValidosParaAplicarMetodo + 1;
+			var goalsOutRange = false;
 			
+
+			var currentYearAndChamp = previsoes.where(function(games){ return jogoAtual.Ano == games.Ano && jogoAtual.Campeonato == games.Campeonato; });
+			
+			var lastGamesHome = currentYearAndChamp.where(function(games){
+					var actualRound = previsoes[i].Rodada;
+					var initialRange = parseInt(actualRound) - 6;
+					var finalRange = parseInt(actualRound) - 1;
+
+					return ((parseInt(games.Rodada) >= initialRange) && (parseInt(games.Rodada) <= finalRange)) 
+					&& 
+					(
+						(jogoAtual.NomeTimeCasa == games.NomeTimeCasa || jogoAtual.NomeTimeCasa == games.NomeTimeFora)
+					);
+			});
+
+
+			var lastGamesAway = currentYearAndChamp.where(function(games){
+					var actualRound = previsoes[i].Rodada;
+					var initialRange = parseInt(actualRound) - 6;
+					var finalRange = parseInt(actualRound) - 1;
+
+					return ((parseInt(games.Rodada) >= initialRange) && (parseInt(games.Rodada) <= finalRange)) 
+					&& 
+					(
+						(jogoAtual.NomeTimeFora == games.NomeTimeCasa || jogoAtual.NomeTimeFora == games.NomeTimeFora)
+					);
+			});
+
+			var howManyGamesHasMoreThanOneHalfGoalHome = 0;
+			for (var j = 0; j < lastGamesHome.length; j++) {
+				if(lastGamesHome[j].GoalsTime.length >= 2){
+					howManyGamesHasMoreThanOneHalfGoalHome = howManyGamesHasMoreThanOneHalfGoalHome + 1;
+				}
+			}
+
+			var howManyGamesHasMoreThanOneHalfGoalAway = 0;
+			for (var j = 0; j < lastGamesAway.length; j++) {
+				if(lastGamesAway[j].GoalsTime.length >= 2){
+					howManyGamesHasMoreThanOneHalfGoalAway = howManyGamesHasMoreThanOneHalfGoalAway + 1;
+				}
+			}
+
+			var deuRealmenteCertoBezos = (howManyGamesHasMoreThanOneHalfGoalAway >= 4 && howManyGamesHasMoreThanOneHalfGoalHome >= 4)
+									 && previsoes[i].GoalsTime.length >= 2;
+
+			var MaiorQueOitoDeuCerto = (howManyGamesHasMoreThanOneHalfGoalAway + howManyGamesHasMoreThanOneHalfGoalHome) >= 8
+									 && previsoes[i].GoalsTime.length >= 2;
+
+			if(deuRealmenteCertoBezos){
+				jogosMetodoDeuCerto = jogosMetodoDeuCerto + 1;
+			}
+
+			if(MaiorQueOitoDeuCerto){
+				jogosMaiorQueOitoDeuCerto = jogosMaiorQueOitoDeuCerto + 1;
+				switch (jogoAtual.Campeonato){
+					case "Bundesliga":
+						jogosMaiorQueOitoDeuCertoAlemanha = jogosMaiorQueOitoDeuCertoAlemanha+1;
+					case "Primera Division":
+						jogosMaiorQueOitoDeuCertoEspanha = jogosMaiorQueOitoDeuCertoEspanha+1;
+					case "Ligue 1":
+						jogosMaiorQueOitoDeuCertoFranca = jogosMaiorQueOitoDeuCertoFranca+1;
+					case "Barclays Premier League":
+						jogosMaiorQueOitoDeuCertoInglaterra = jogosMaiorQueOitoDeuCertoInglaterra+1;
+					case "Serie A TIM":
+						jogosMaiorQueOitoDeuCertoItalia = jogosMaiorQueOitoDeuCertoItalia+1;
+				}
+			}
+
 			  worksheet.addRow({
+			  	ganhamosBufunfaBezos: (deuRealmenteCertoBezos).toString(),
+			  	ganhamosBufunfaMaiorQueOito: (MaiorQueOitoDeuCerto).toString(),
+			  	oitoDeDozeOverUmMeio: ((howManyGamesHasMoreThanOneHalfGoalAway + howManyGamesHasMoreThanOneHalfGoalHome ) >= 8).toString(),
+			  	quatroDeSeisOverUmMeio: (howManyGamesHasMoreThanOneHalfGoalAway >= 4 && howManyGamesHasMoreThanOneHalfGoalHome >= 4).toString(),
 			    goalsTime : previsoes[i].GoalsTime.join(','),
 				nomeTimeCasa : previsoes[i].NomeTimeCasa,
 				nomeTimeFora : previsoes[i].NomeTimeFora,
@@ -219,5 +318,13 @@ sequence
 		workbook.csv.writeFile('filename')
 	    .then(function() {
 	        console.log('foi'); 
+	        console.log(jogosMetodoDeuCerto.toString() + " MetodoBezos");
+	        console.log(jogosValidosParaAplicarMetodo);
+	        console.log(jogosMaiorQueOitoDeuCerto.toString() + " MetodoMaiorQueOito");
+	        console.log(jogosMaiorQueOitoDeuCertoAlemanha.toString() + " Alemao");
+	        console.log(jogosMaiorQueOitoDeuCertoEspanha.toString() + " Espanhol");
+	        console.log(jogosMaiorQueOitoDeuCertoFranca.toString() + " Fraces");
+	        console.log(jogosMaiorQueOitoDeuCertoInglaterra.toString() + " Ingles");
+	        console.log(jogosMaiorQueOitoDeuCertoItalia.toString() + " Italiano");
 	    });
 	});
