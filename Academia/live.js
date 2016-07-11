@@ -31,11 +31,14 @@ self.elementosParaSalvar = [];
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/8491/21879/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1',
 	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/7281/18383/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1'
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/8491/21879/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1'
+
+
+	
 ];
 
 self.opts = {
@@ -48,7 +51,7 @@ var eachRoundGameLink = [];
 	sequence = Sequence.create();
 	sequence
 		.then(function(next){
-			if(self.links.length == 0){ return; }
+			if(self.links.length == 0 && self.opts.url == ''){ return; }
 			if(self.opts.url == ''){
 				self.opts.url = self.links.pop();
 			}
@@ -165,9 +168,15 @@ var eachRoundGameLink = [];
 			   };
 
 			   previsaoModel.findOne(query, function(err, doc){
-					doc.GoalsTime = jogo.goalsTime;
+
+					doc.GoalsTime = ['0'];
+
+			   		if(jogo.goalsTime){
+						doc.GoalsTime = jogo.goalsTime;
+			   		}
+
 					doc.save();
-					console.log(doc.GoalsTime);
+
 					if (--total) saveAll();
 			    	else {
 			    		console.log(result + "SALVO COM SUCESSO!");
