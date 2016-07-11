@@ -1,3 +1,7 @@
+require('linqjs');
+var arroz = []
+console.log(arroz.sum);
+return;
 var page = require('webpage').create();
 page.open('https://www.academiadasapostasbrasil.com/stats/match/brasil-stats/2218297/1/prelive', function(status) {
   if (status !== 'success') {
