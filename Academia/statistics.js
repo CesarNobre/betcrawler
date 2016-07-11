@@ -16,7 +16,7 @@ var Sequence = exports.Sequence || require('sequence').Sequence
     , sequence = Sequence.create()
     , err
     ;
-
+var alreadyPassedChampHalf = false;
 
 db.on('error', console.error);
 db.once('open', function() {
@@ -27,10 +27,18 @@ var previsaoJogoSchema = new Mongoose.Schema(PrevisaoJogo.module.PrevisaoJogo);
 var previsaoModel = Mongoose.model('previsaoModel', previsaoJogoSchema);
 var self = this;
 
+self.links = 
+[
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/7281/18383/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/8491/21879/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1'
+];
+
 self.elementosParaSalvar = [];
-var firstRoundLink = 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1';
 self.opts = {
-  url: firstRoundLink,
+  url: '',
   timeout: timeoutInMilliseconds
 }
 
@@ -41,6 +49,11 @@ var eachRoundGameLink = [];
 	sequence
 		.then(function(next){
 			console.log('ENTROU NO THEN');
+			if(self.links.length == 0 && self.opts.url == ''){ return; }
+			if(self.opts.url == ''){
+				self.opts.url = self.links.pop();
+			}
+
 			request(self.opts, function(err, res, body){
 				if(err){throw err;}
 				
@@ -97,7 +110,7 @@ var eachRoundGameLink = [];
 						previsaoJogo.ForaTop5Casa = parseInt($(elementoForaTop5Casa).text().trim()) <= 5;
 
 						var propriedades = Propriedades.module.Propriedades;
-
+						
 						var indexPropriedade = 0;
 						var cabecalhosDoMandante = [85, 89, 93, 97, 101, 105, 109, 113, 116, 119];
 						var irParaProximoIndex = true;
@@ -183,22 +196,46 @@ var eachRoundGameLink = [];
 
 						});
 
-			    		page++;
-		    			self.elementosParaSalvar.push(previsaoJogo);
 
-						if(page >= eachRoundGameLink.length){
-							console.log('entrou no PROXIMO!!')
-							next(err, self.elementosParaSalvar);
-							return false;
-						}
+			    		var query = {
+							NomeTimeCasa:previsaoJogo.NomeTimeCasa, 
+							NomeTimeFora:previsaoJogo.NomeTimeFora,
+							Ano:previsaoJogo.Ano,
+							Rodada:previsaoJogo.Rodada
+					   };
 
-						nextAsync(err, self.elementosParaSalvar);
+			    		previsaoModel.findOne(query, function(err, result){
+							if(err) throw err;
+	
+				    		page++;
+
+							if(!result)
+							{
+								console.log("NÃO ACHEI")
+								self.elementosParaSalvar.push(previsaoJogo);
+							} else{
+								console.log("ACHEI SIM MISERAVI!");
+							}
+
+							if(page >= eachRoundGameLink.length){
+								console.log('entrou no PROXIMO!!')
+								next(err, self.elementosParaSalvar);
+								return false;
+							}
+
+							nextAsync(err, self.elementosParaSalvar);
+					    });
+		    			
 					});//request
 				}, 
 			5);
 		})
 		.then(function(next, err, jogos){
-			if(jogos.length == 0 ){console.log('deu ruim'); return;}
+			if(jogos.length == 0 ){
+				console.log('nada para salvar'); 
+				next();
+				return;
+			}
 			console.log('valor de jogos: ' + jogos);
 
 			var total = jogos.length
@@ -207,11 +244,6 @@ var eachRoundGameLink = [];
 
 			function saveAll(){
 			  var doc = jogos.pop();
-			  for (var i = 0; i < jogos.length; i++) {
-			  	//console.log(jogos[i].NomeTimeCasa);
-			  }
-			  //console.log(doc.NomeTimeCasa);
-			  //console.log('entrou no saveall');
 			  doc.save(function(err, saved){
 			    if (err) 
 			    {console.log('deu ruim no save!');throw err;}//handle error
@@ -232,16 +264,32 @@ var eachRoundGameLink = [];
 			var currentRoundUrl = self.opts.url;
 			var splittedUrl = currentRoundUrl.split('/');
 			var lastItem = splittedUrl[splittedUrl.length - 1];
+			
+			if(lastItem >= 28){
+				alreadyPassedChampHalf = true;
+			}
+
+			if(alreadyPassedChampHalf && lastItem == 1){
+				self.opts.url = '';
+				console.log('PRONTO FILHÃO!');
+				alreadyPassedChampHalf = false; 
+				return StartCrawler();	
+			}
 
 			if(lastItem >= 38)
-			{console.log('PRONTO FILHÃO!'); return false;}
+			{
+				self.opts.url = '';
+				console.log('PRONTO FILHÃO!'); 
+				alreadyPassedChampHalf = false; 
+				return StartCrawler();
+			}
 
 			splittedUrl[splittedUrl.length - 1] =  parseInt(lastItem) + 1;
 			
 			self.opts.url = splittedUrl.join('/');
 
 			console.log(self.opts.url);
-
+			console.log("faltam " + self.links.length + "temporadas");
 
 			StartCrawler();
 		});
