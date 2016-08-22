@@ -1,6 +1,6 @@
 "use strict"
 var Mongoose = require('mongoose');
-Mongoose.connect('mongodb://localhost/betcrawler');
+Mongoose.connect('mongodb://sa:arroz@ds013486.mlab.com:13486/betbot');
 var db = Mongoose.connection;
 var request = require('request');
 var cheerio = require('cheerio');
@@ -29,11 +29,7 @@ var self = this;
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/6061/15105/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/7281/18383/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/8491/21879/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/9773/25985/0/1',
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/11646/31781/0/1'
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7'
 ];
 
 self.elementosParaSalvar = [];
@@ -60,6 +56,10 @@ var eachRoundGameLink = [];
 				var $ = cheerio.load(body);
 
 				$('.darker a').each(function() {
+					if($(this).text().trim() == 'vs'){ 
+						console.log('ops, ainda sem resultado'); 
+						return true;
+					}
 					eachRoundGameLink.push($(this).attr('href'));
 				});
 			next(err, eachRoundGameLink);
@@ -75,8 +75,8 @@ var eachRoundGameLink = [];
 
 				function (nextAsync, teste) {
 				    request(eachRoundGameLink[page], function(err, res, body) {
-					    if (err) {return console.log(err); return false}
-					    if (res.statusCode != 200) {return console.log(res.statusCode); return false}
+					    if (err) {return console.log(err);}
+					    if (res.statusCode != 200) {return console.log(res.statusCode);}
 
 						var previsaoJogo = new previsaoModel();
 			        	var $ = cheerio.load(body);
@@ -260,7 +260,11 @@ var eachRoundGameLink = [];
 			saveAll();
 		})
 		.then(function(next, err){
+			var shouldGetOnlyDailyStatistics = process.argv[2] == 'daily';
+			if(shouldGetOnlyDailyStatistics){process.exit();}
+			
 			console.log('entrou');
+			
 			var currentRoundUrl = self.opts.url;
 			var splittedUrl = currentRoundUrl.split('/');
 			var lastItem = splittedUrl[splittedUrl.length - 1];
