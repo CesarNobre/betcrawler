@@ -76,18 +76,11 @@ function StartBetScheduler(){
 		for (var i = 0; i < jogosDaRodada.length; i++) {
 			var jogoAtual = jogosDaRodada[i];
 
-			//if(previsoes[i].Rodada <= 6){ continue;}
-
-			if(jogoAtual.GoalsTime.length > 0){
-				goalsOutRange = (jogoAtual.GoalsTime[0] <= 15 || jogoAtual.GoalsTime[0] >= 30)
-				
-				if(goalsOutRange){
-					continue;
-				}
-
-			}
-
-			var currentYearAndChamp = jogoDeTodoOCampeonato.where(function(games){ return jogoAtual.Ano == games.Ano && jogoAtual.Campeonato == games.Campeonato; });
+			if(jogoAtual.Rodada <= 6){ continue;}
+			
+			var currentYearAndChamp = jogoDeTodoOCampeonato.where(function(games){ 
+				return jogoAtual.Ano == games.Ano && jogoAtual.Campeonato == games.Campeonato; 
+			});
 			var lastGamesHome = currentYearAndChamp.where(function(games){
 					var actualRound = jogoAtual.Rodada;
 					var initialRange = parseInt(actualRound) - 6;
@@ -159,13 +152,14 @@ function StartBetScheduler(){
 			   		console.log('DOC NULO');
 			   		return;	
 			   	}
-			   	
-			   	doc.save(function(e){
-						if(e){console.log(e);}
-						else{console.log('salvou');}
-				});
 
 			   	doc.bezos = true;
+			   	
+			   	doc.save(function(e){
+					if(e){console.log(e);}
+					else{console.log('salvou');}
+				});
+
 				
 			   	setTimeout(function() {
 					if (--allGamesWithBezosStrategy) 
