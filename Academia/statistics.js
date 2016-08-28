@@ -6,6 +6,7 @@ var request = require('request');
 var cheerio = require('cheerio');
 var PrevisaoJogo = require('./PrevisaoJogo');
 var Propriedades = require('./propriedades');
+var RemoverAcentos = require('./removeracentos');
 
 var find = require('cheerio-eq');
 var async = require('async');
@@ -29,7 +30,7 @@ var self = this;
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7'
+	'https://www.academiadasapostasbrasil.com/stats/competition/alemanha-stats/9'
 ];
 
 self.elementosParaSalvar = [];
@@ -96,8 +97,8 @@ var eachRoundGameLink = [];
 						var elementoUltimosJogosCasa = find($,'.stat-last10 tbody:eq(0) tr');
 						var elementoUltimosJogosFora = find($,'.stat-last10 tbody:eq(1) tr');
 
-						previsaoJogo.NomeTimeCasa = $('.stats-subtitle').first().text();
-						previsaoJogo.NomeTimeFora = $(elementoNomeTimeFora).text();
+						previsaoJogo.NomeTimeCasa = RemoverAcentos.module.remover($('.stats-subtitle').first().text());
+						previsaoJogo.NomeTimeFora = RemoverAcentos.module.remover($(elementoNomeTimeFora).text());
 						previsaoJogo.Resultado = $('.f-score').text().trim();
 						previsaoJogo.Ano = $(elementoAnoRodada).text().trim();
 						previsaoJogo.Rodada = $(elementoRodada).text().trim().replace(regexOnlyNumbers,'');

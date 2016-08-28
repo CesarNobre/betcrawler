@@ -1,20 +1,18 @@
 require('linqjs');
+var self = this;
 var Excel = require('exceljs');
 var workbook = new Excel.Workbook();
 var sheet = workbook.addWorksheet('My Sheet');
 var Mongoose = require('mongoose');
-Mongoose.connect('mongodb://localhost/betcrawler');
+Mongoose.connect('mongodb://sa:arroz@ds013486.mlab.com:13486/betbot');
 var db = Mongoose.connection;
 
 var PrevisaoJogo = require('./PrevisaoJogo');
-var excelColumns = require('./methodBezos/columns');
-var excelRow = require('./methodBezos/row');
 
 var Sequence = exports.Sequence || require('sequence').Sequence
     , sequence = Sequence.create()
     , err
     ;
-var worksheet = workbook.getWorksheet('My Sheet');
 
 db.once('open', function() {
   console.log('Conectado ao MongoDB.')
@@ -32,16 +30,28 @@ var jogosMaiorQueOitoDeuCertoFranca = 0;
 var jogosMaiorQueOitoDeuCertoItalia = 0;
 var jogosMaiorQueOitoDeuCertoInglaterra = 0;
 
+self.opts = {
+  url: 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7',
+  timeout: timeoutInMilliseconds
+}
+
 sequence
 	.then(function(next){
-		var data = previsaoModel.find({}, function(err, previsao){
-			next(err, previsao);
+       	request(self.opts, function(err, res, body){
+			if(err){throw err;}
+			
+			var $ = cheerio.load(body);
+
+			$('.darker a').each(function() {
+				if($(this).text().trim() == 'vs'){ 
+					console.log('ops, ainda sem resultado'); 
+					return true;
+				}
+				eachRoundGameLink.push($(this).attr('href'));
+			});
+		    next(err, eachRoundGameLink);
 		});
-	})
-	.then(function(next, err, previsoes){
-		worksheet.columns = excelColumns.module.columns;	
-		console.log('foi');
-		next(err, previsoes)
+
 	})
 	.then(function(next, err, previsoes){
 		for (var i = 0; i < previsoes.length; i++) {
@@ -51,7 +61,7 @@ sequence
 			if(previsoes[i].GoalsTime.length > 0){
 				goalsOutRange = (previsoes[i].GoalsTime[0] <= 15 || previsoes[i].GoalsTime[0] >= 30)
 				
-				if(goalsOutRange){
+				if(previsoes[i].GoalsTime[0] <= 15){
 					continue;
 				}
 

@@ -6,6 +6,8 @@ var request = require('request');
 var cheerio = require('cheerio');
 var PrevisaoJogo = require('./PrevisaoJogo');
 var Propriedades = require('./propriedades');
+var RemoverAcentos = require('./removeracentos');
+var FullNameFinder = require('./fullnamefinder');
 
 var find = require('cheerio-eq');
 var async = require('async');
@@ -31,7 +33,7 @@ self.elementosParaSalvar = [];
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7',
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/12612/35880/0/1',
 ];
 
 self.opts = {
@@ -67,6 +69,8 @@ var eachRoundGameLink = [];
 		})
 		.then(function(next, err, eachRoundGameLink){
 			var page = 0;
+			eachRoundGameLink = [];
+			eachRoundGameLink.push('https://www.academiadasapostasbrasil.com/stats/match/espanha-stats/2282761/1/live');
 			console.log(eachRoundGameLink.length);
 			async.whilst(
 				function(){
@@ -149,32 +153,52 @@ var eachRoundGameLink = [];
 			var total = jogos.length
 			  , result = []
 			;
-
+			console.log(jogos.length + " TOTAL DE JOGOS");
 			function saveAll(){
 			  var jogo = jogos.pop();
 
+			  var nomeCasa = FullNameFinder.module.buscar(jogo.NomeTimeCasa);
+			  var nomeFora = FullNameFinder.module.buscar(jogo.NomeTimeFora);
+			  
 		      var query = {
-					NomeTimeCasa:jogo.NomeTimeCasa, 
-					NomeTimeFora:jogo.NomeTimeFora,
+					NomeTimeCasa: nomeCasa, 
+					NomeTimeFora: nomeFora,
 					Ano:jogo.Ano,
-					Rodada:jogo.Rodada
+					Rodada:jogo.Rodada,
+					Campeonato:jogo.Campeonato
 			   };
+			   console.log(query.NomeTimeCasa + " AQUI A QUERY");
+			   console.log(query.NomeTimeFora + " AQUI A QUERY");
+			   console.log(query.Ano + " AQUI A QUERY");
+			   console.log(query.Rodada + " AQUI A QUERY");
+			   console.log(query.Campeonato + " AQUI A QUERY");
 
 			   previsaoModel.findOne(query, function(err, doc){
-
-					doc.GoalsTime = ['0'];
+			   		if(err){console.log(err);}
+			   		if(!doc){
+			   			console.log('DOC NULO');
+			   			return;	
+			   		}
+			   		console.log("ACHEI O DOC");
 
 			   		if(jogo.goalsTime){
 						doc.GoalsTime = jogo.goalsTime;
 			   		}
+					
+					doc.save(function(e){
+						if(e){console.log(e);}
+						else{console.log('salvou');}
+					});
 
-					doc.save();
 
-					if (--total) saveAll();
-			    	else {
-			    		console.log(result + "SALVO COM SUCESSO!");
-			    		next();
-			    	} 
+					var millisecondsToWait = 500;
+					setTimeout(function() {
+					    if (--total) saveAll();
+				    	else {
+				    		console.log(result + "SALVO COM SUCESSO!");
+				    		next();
+				    	}
+					}, millisecondsToWait);
 			    });
 
 			}
