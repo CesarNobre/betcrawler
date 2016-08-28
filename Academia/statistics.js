@@ -30,7 +30,7 @@ var self = this;
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/alemanha-stats/9'
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7'
 ];
 
 self.elementosParaSalvar = [];
