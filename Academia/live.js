@@ -69,9 +69,6 @@ var eachRoundGameLink = [];
 		})
 		.then(function(next, err, eachRoundGameLink){
 			var page = 0;
-			eachRoundGameLink = [];
-			eachRoundGameLink.push('https://www.academiadasapostasbrasil.com/stats/match/espanha-stats/2282761/1/live');
-			console.log(eachRoundGameLink.length);
 			async.whilst(
 				function(){
 					return page < eachRoundGameLink.length;
