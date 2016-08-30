@@ -33,7 +33,7 @@ self.elementosParaSalvar = [];
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7',
+	'https://www.academiadasapostasbrasil.com/stats/competition/alemanha-stats/9/12593/35823/0/1',
 ];
 
 self.opts = {

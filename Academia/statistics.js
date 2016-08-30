@@ -30,41 +30,81 @@ var self = this;
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7'
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/12612/35880/0/1'
 ];
 
 self.elementosParaSalvar = [];
 self.opts = {
   url: '',
   timeout: timeoutInMilliseconds
+};
+
+self.linkByRound = {
+  url: 'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/12612/35880/0/{0}',
+  timeout: timeoutInMilliseconds
 }
 
 function StartCrawler(){
 	console.log('ENTROU NO START CRAWLER');
-var eachRoundGameLink = [];
+	var eachRoundGameLink = [];
 	sequence = Sequence.create();
 	sequence
 		.then(function(next){
 			console.log('ENTROU NO THEN');
+
 			if(self.links.length == 0 && self.opts.url == ''){ return; }
 			if(self.opts.url == ''){
 				self.opts.url = self.links.pop();
 			}
 
-			request(self.opts, function(err, res, body){
-				if(err){throw err;}
-				
-				var $ = cheerio.load(body);
+			var shouldGetOnlyDailyStatistics = process.argv[2] == 'daily';
 
-				$('.darker a').each(function() {
-					if($(this).text().trim() == 'vs'){ 
-						console.log('ops, ainda sem resultado'); 
-						return true;
+			function ChampionshipRoundHomePage(options, isGettingLastRound){
+				console.log('entrou no ChampionshipRoundHomePage');
+				request(options, function(err, res, body){
+					console.log('feito request com link' + options.url);
+					if(err){throw err;}
+
+					var $ = cheerio.load(body);
+
+					$('.darker a').each(function() {
+						if($(this).text().trim() == 'vs'){ 
+							console.log('ops, ainda sem resultado'); 
+							return true;
+						}
+						eachRoundGameLink.push($(this).attr('href'));
+					});
+
+					console.log('quantidade de jogos salvos' + eachRoundGameLink.length);
+					
+
+					if(shouldGetOnlyDailyStatistics && isGettingLastRound == false){
+						console.log('entrou no daily');
+						var actualRound = parseInt($('#week-gr span').text());
+						var previousRound = actualRound - 1;
+						
+						self.linkByRound.url = self.linkByRound.url.replace('{0}', previousRound.toString());
+						console.log('link: ' + self.linkByRound.url);
+						
+						ChampionshipRoundHomePage(self.linkByRound, true);	
 					}
-					eachRoundGameLink.push($(this).attr('href'));
+
+					if(shouldGetOnlyDailyStatistics && isGettingLastRound)
+					{
+						if(eachRoundGameLink.length === 0)	{console.log('exit?');process.exit()};
+
+						next(err, eachRoundGameLink);
+					}
+
+					if(shouldGetOnlyDailyStatistics == false){
+						if(eachRoundGameLink.length === 0)	{console.log('exit?');process.exit()};
+
+						next(err, eachRoundGameLink);	
+					}
 				});
-			next(err, eachRoundGameLink);
-			});		
+			};
+
+			ChampionshipRoundHomePage(self.opts, false);
 		})
 		.then(function(next, err, eachRoundGameLink){
 			var page = 0;
