@@ -30,7 +30,7 @@ var self = this;
 
 self.links = 
 [
-	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7/12612/35880/0/1'
+	'https://www.academiadasapostasbrasil.com/stats/competition/espanha-stats/7'
 ];
 
 self.elementosParaSalvar = [];
@@ -56,55 +56,6 @@ function StartCrawler(){
 			if(self.opts.url == ''){
 				self.opts.url = self.links.pop();
 			}
-
-			var shouldGetOnlyDailyStatistics = process.argv[2] == 'daily';
-
-			function ChampionshipRoundHomePage(options, isGettingLastRound){
-				console.log('entrou no ChampionshipRoundHomePage');
-				request(options, function(err, res, body){
-					console.log('feito request com link' + options.url);
-					if(err){throw err;}
-
-					var $ = cheerio.load(body);
-
-					$('.darker a').each(function() {
-						if($(this).text().trim() == 'vs'){ 
-							console.log('ops, ainda sem resultado'); 
-							return true;
-						}
-						eachRoundGameLink.push($(this).attr('href'));
-					});
-
-					console.log('quantidade de jogos salvos' + eachRoundGameLink.length);
-					
-
-					if(shouldGetOnlyDailyStatistics && isGettingLastRound == false){
-						console.log('entrou no daily');
-						var actualRound = parseInt($('#week-gr span').text());
-						var previousRound = actualRound - 1;
-						
-						self.linkByRound.url = self.linkByRound.url.replace('{0}', previousRound.toString());
-						console.log('link: ' + self.linkByRound.url);
-						
-						ChampionshipRoundHomePage(self.linkByRound, true);	
-					}
-
-					if(shouldGetOnlyDailyStatistics && isGettingLastRound)
-					{
-						if(eachRoundGameLink.length === 0)	{console.log('exit?');process.exit()};
-
-						next(err, eachRoundGameLink);
-					}
-
-					if(shouldGetOnlyDailyStatistics == false){
-						if(eachRoundGameLink.length === 0)	{console.log('exit?');process.exit()};
-
-						next(err, eachRoundGameLink);	
-					}
-				});
-			};
-
-			ChampionshipRoundHomePage(self.opts, false);
 		})
 		.then(function(next, err, eachRoundGameLink){
 			var page = 0;
