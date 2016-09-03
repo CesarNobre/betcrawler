@@ -12,7 +12,7 @@ exports.module = {
 		  	teamName = "Sporting Gijon";
 		}
 		
-		if(teamName == "Athletic Club"){
+		if(teamName == "Athletic Club	"){
 		  	teamName = "Athletic Bilbao";
 		}
 
