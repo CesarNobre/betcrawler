@@ -24,6 +24,9 @@ exports.module = {
 		  	teamName = "RB Leipzig";
 		}
 
+		if(teamName == "Alaves"){
+		  	teamName = "Deportivo Alaves";
+		}
 
 		if(teamName == "Hertha BSC"){
 		  	teamName = "Hertha Berlin";
