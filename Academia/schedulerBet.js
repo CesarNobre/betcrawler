@@ -147,18 +147,39 @@ sequence
 		var formattedTransportData = transportDataUnformatted.replace('{user}', emailData.address).replace('{password}', emailData.password);
 		var transporter = nodemailer.createTransport(formattedTransportData);
 
+		var plaintextBody = '';
+		self.gamesToBet.push({
+					NomeTimeCasa: "Barcelona",
+					NomeTimeFora: "Betis",
+					Campeonato: "Primera Division",
+					bezos: true,
+					maiorQueOito: false	
+		});
+		for (var index = 0; index < self.gamesToBet.length; index++) {
+			var currentGame = self.gamesToBet[index];
+			var unformattedPlaintextBody = '<b>Campeonato: {Campeonato}</b> {nomeTimeCasa} x {nomeTimeFora} -> método bezos? <b>{bezos}</b> método maior que oito? {maiorQueOito} \n';
+			plaintextBody += unformattedPlaintextBody
+							.replace('{nomeTimeCasa}', currentGame.NomeTimeCasa)
+							.replace('{nomeTimeFora}', currentGame.NomeTiraFora)
+							.replace('{Campeonato}', currentGame.Campeonato)
+							.replace('{maiorQueOito}', currentGame.maiorQueOito)
+							.replace('{bezos}', currentGame.bezos);
+		}
+
 		var mailOptions = {
 			from: 'cesarnobrefilho@gmail.com', // sender address
 			to: 'cesarnobrefilho@gmail.com', // list of receivers
-			subject: 'Hello ✔', // Subject line
-			text: 'Hello world 🐴', // plaintext body
-			html: '<b>Hello world 🐴</b>' // html body
+			subject: 'betbot agenda 💵', // Subject line
+			text: plaintextBody, // plaintext body
+			html: plaintextBody // html body
 		};
 
 		transporter.sendMail(mailOptions, function(error, info){
 			if(error){
 				return console.log(error);
 			}
+			
 			console.log('Message sent: ' + info.response);
+			process.exit();
 		});
 	});
