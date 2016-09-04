@@ -49,8 +49,8 @@ sequence
 			var $ = cheerio.load(body);
 
 			$('.darker a').each(function() {
-				if($(this).text().trim() == 'vs'){ 
-					console.log('ops, ainda sem resultado'); 
+				if($(this).text().trim() != 'vs'){ 
+					console.log('ops, já tem resultado'); 
 					return true;
 				}
 				self.eachRoundGameLink.push($(this).attr('href'));
@@ -124,7 +124,10 @@ sequence
 		}
 	    next(err);
 	})
-	.then(function(next, err){
+	.then(ReadEmailUserAndPassword)
+	.then(SendEmail);
+
+	function ReadEmailUserAndPassword(next, err){
 		var emailAddress = '';
 		var emailPassword = '';
 
@@ -142,12 +145,14 @@ sequence
 			next(err, emailUserAndPass);
 		});
 
-	}).then(function(next, err, emailData){
+	}
+
+	function SendEmail(next, err, emailData){
 		var transportDataUnformatted = 'smtps://{user}%40gmail.com:{password}@smtp.gmail.com';
 		var formattedTransportData = transportDataUnformatted.replace('{user}', emailData.address).replace('{password}', emailData.password);
 		var transporter = nodemailer.createTransport(formattedTransportData);
-
 		var plaintextBody = '';
+
 		self.gamesToBet.push({
 					NomeTimeCasa: "Barcelona",
 					NomeTimeFora: "Betis",
@@ -155,6 +160,7 @@ sequence
 					bezos: true,
 					maiorQueOito: false	
 		});
+
 		for (var index = 0; index < self.gamesToBet.length; index++) {
 			var currentGame = self.gamesToBet[index];
 			var unformattedPlaintextBody = '<b>Campeonato: {Campeonato}</b> {nomeTimeCasa} x {nomeTimeFora} -> método bezos? <b>{bezos}</b> método maior que oito? {maiorQueOito} \n';
@@ -182,4 +188,4 @@ sequence
 			console.log('Message sent: ' + info.response);
 			process.exit();
 		});
-	});
+	}

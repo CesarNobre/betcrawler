@@ -21,6 +21,7 @@
     "cheerio": "^0.22.0",
     "cheerio-eq": "^1.0.1",
     "mongoose": "^4.5.10",
+    "nodemailer": "^2.5.0",
     "request": "^2.74.0",
     "sequence": "^3.0.0"
   }
